@@ -1,17 +1,17 @@
 import { encode, decode } from 'jwt-simple'
 
 const SECRET = 'xxx'
-const REQUIRED_CLAIMS = [ 'iss', 'exp' ]
+const REQUIRED_CLAIMS = [ 'nbf', 'exp' ]
 const RECOMMENDED_CLAIMS = [ 'sub', 'aud' ]
 
 const generate = () => {
-  const iss = Date.now() / 1000
-  const claimsPass = [{ iss, exp: iss + 1 }, { iss, exp: iss + 10 }, { iss, exp: iss + 100 }]
+  const nbf = Date.now() / 1000
+  const claimsPass = [{ nbf, exp: nbf + 1 }, { nbf, exp: nbf + 10 }, { nbf, exp: nbf + 100 }]
 
-  const claimsFail =  [ { iss, exp: iss - 100 }
-                      , { iss: Date.now() / 100, exp: Date.now() / 100 - 1 }
-                      , { iss: Date.now() / 10, exp: Date.now() / 10 }
-                      , { iss: Date.now() * -1, exp: Date.now() * -1 + 1 }
+  const claimsFail =  [ { nbf, exp: nbf - 100 }
+                      , { nbf: Date.now() / 100, exp: Date.now() / 100 - 1 }
+                      , { nbf: Date.now() / 10, exp: Date.now() / 10 }
+                      , { nbf: Date.now() * -1, exp: Date.now() * -1 + 1 }
                       ]
 
 
@@ -21,7 +21,7 @@ const generate = () => {
   const refreshFail = jwtFail.map(x => () => { throw new Error('BAD REFRESH')})
   const leadSecondsPass = [10, () => 100]
   const leadSecondsFail = [-10, () => -1]
-  return { iss, claimsPass, claimsFail, jwtPass, jwtFail, refreshPass, refreshFail, leadSecondsPass, leadSecondsFail }
+  return { nbf, claimsPass, claimsFail, jwtPass, jwtFail, refreshPass, refreshFail, leadSecondsPass, leadSecondsFail }
 }
 
 describe('autorefresh', () => {

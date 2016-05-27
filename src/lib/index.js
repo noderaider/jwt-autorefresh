@@ -30,11 +30,13 @@ export default function autorefresh(opts) {
 
   const calculateDelay = access_token => {
     try {
-      const { iss, exp } = decode(access_token, null, true)
+      const { exp, nbf } = decode(access_token, null, true)
       if(IS_DEV) {
-        assert.ok(iss, 'autorefresh requires JWT token with "iss" standard claim')
         assert.ok(exp, 'autorefresh requires JWT token with "exp" standard claim')
-        assert.isBelow(iss, exp, '"iss" claim should be less than "exp" claim')
+        if(nbf) {
+          assert.typeOf(nbf, 'number', 'nbf claim should be a future NumericDate value')
+          assert.isBelow(nbf, exp, '"nbf" claim should be less than "exp" claim if it exists')
+        }
       }
       const lead = typeof leadSeconds === 'function' ? leadSeconds() : leadSeconds
       if(IS_DEV) {
