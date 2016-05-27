@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../">
+  <title data-ice="title">lib/index.js | API Document</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  
+  
+  <script src="script/manual.js"></script>
+</head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <a data-ice="repoURL" href="https://github.com/cchamberlain/jwt-autorefresh" class="repo-url-github">Repository</a>
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+</header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-autorefresh">autorefresh</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">lib/index.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">import { decode } from &apos;jwt-simple&apos;
+import { assert } from &apos;chai&apos;
+import { createLogger } from &apos;bunyan&apos;
+
+
+const IS_DEV = process.env.NODE_ENV !== &apos;production&apos;
+const CODES = { DELAY: &apos;DELAY&apos;
+              , DELAY_ERROR: &apos;DELAY_ERROR&apos;
+              , INVALID_JWT: &apos;INVALID_JWT&apos;
+              , EXECUTE: &apos;EXECUTE&apos;
+              , SCHEDULE: &apos;SCHEDULE&apos;
+              , START: &apos;START&apos;
+              , CANCEL: &apos;CANCEL&apos;
+              }
+const format = (code, message) =&gt; `${code}|${message}`
+
+const validate = ({ refresh, leadSeconds, log = createLogger({ name: &apos;autorefresh&apos;, level: IS_DEV ? &apos;info&apos; : &apos;error&apos; })}) =&gt; {
+  if(IS_DEV) {
+    assert.ok(refresh, &apos;autorefresh requires a refresh function parameter&apos;)
+    assert.ok(leadSeconds, &apos;autorefresh requires a leadSeconds number or function returning a number in seconds parameter&apos;)
+    assert.typeOf(refresh, &apos;function&apos;, &apos;autorefresh refresh parameter must be a function&apos;)
+    assert([&apos;number&apos;, &apos;function&apos;].includes(typeof leadSeconds), &apos;function&apos;, &apos;autorefresh refresh parameter must be a function&apos;)
+  }
+  return { refresh, leadSeconds, log }
+}
+
+export default function autorefresh(opts) {
+  const { refresh, leadSeconds, log } = validate(opts)
+  let timeoutID = null
+
+  const calculateDelay = access_token =&gt; {
+    try {
+      if(IS_DEV) {
+        assert.ok(access_token, &apos;calculateDelay expects an access_token parameter&apos;)
+        assert.typeOf(access_token, &apos;string&apos;, &apos;access_token should be a string&apos;)
+      }
+      const { exp, nbf } = decode(access_token, null, true)
+      if(IS_DEV) {
+        assert.ok(exp, &apos;autorefresh requires JWT token with &quot;exp&quot; standard claim&apos;)
+        if(nbf) {
+          assert.typeOf(nbf, &apos;number&apos;, &apos;nbf claim should be a future NumericDate value&apos;)
+          assert.isBelow(nbf, exp, &apos;&quot;nbf&quot; claim should be less than &quot;exp&quot; claim if it exists&apos;)
+        }
+      }
+      const lead = typeof leadSeconds === &apos;function&apos; ? leadSeconds() : leadSeconds
+      if(IS_DEV) {
+        assert.typeOf(lead, &apos;number&apos;, &apos;leadSeconds must be or return a number&apos;)
+        assert.isAbove(lead, 0, &apos;lead seconds must resolve to a positive number of seconds&apos;)
+      }
+      const refreshAtMS = (exp - lead) * 1000
+      const delay = refreshAtMS - Date.now()
+      log.info(format(CODES.DELAY, `calculated autorefresh delay =&gt; ${(delay / 1000).toFixed(1)} seconds`))
+      return delay
+    } catch(err) {
+      if(/$Unexpected token [A-Za-z] in JSON/.test(err.message))
+        throw new Error(format(CODES.INVALID_JWT, `JWT token was not a valid format =&gt; ${access_token}`))
+      throw new Error(format(CODES.DELAY_ERROR, `error occurred calculating autorefresh delay =&gt; ${err.message}`))
+    }
+  }
+
+  const _schedule = access_token =&gt; {
+    if(IS_DEV) assert.typeOf(access_token, &apos;string&apos;, &apos;_schedule expects a string access_token parameter&apos;)
+    const delay = calculateDelay(access_token)
+    if(IS_DEV) assert.isAbove(delay, 0, &apos;next auto refresh should always be in the future&apos;)
+    return schedule(delay)
+  }
+
+  const execute = () =&gt; {
+    clearTimeout(timeoutID)
+    log.info(format(CODES.EXECUTE, &apos;executing refresh&apos;))
+    const result = refresh()
+    if(typeof result === &apos;string&apos;)
+      return _schedule(result)
+    assert.ok(result.then, &apos;refresh must return the access_token or a string that resolves to the access_token&apos;)
+    return result
+      .then(access_token =&gt; _schedule(access_token))
+      .catch(err =&gt; {
+        log.error(err, format(CODES.INVALID_REFRESH, `refresh rejected with an error =&gt; ${err.message}`))
+        throw err
+      })
+  }
+
+  const schedule = delay =&gt; {
+    clearTimeout(timeoutID)
+    log.info(format(CODES.SCHEDULE, `scheduled refresh in ${(delay / 1000).toFixed(1)} seconds`))
+    timeoutID = setTimeout(() =&gt; execute(), delay)
+  }
+
+  const start = access_token =&gt; {
+    log.info(format(CODES.START, &apos;autorefresh started&apos;))
+    let delay = calculateDelay(access_token)
+    if(IS_DEV) assert.typeOf(delay, &apos;number&apos;, &apos;calculateDelay must return a number in milliseconds&apos;)
+    if(delay &gt; 0) schedule(delay)
+    else execute()
+    const stop = () =&gt; {
+      clearTimeout(timeoutID)
+      log.info(format(CODES.CANCEL, &apos;autorefresh cancelled&apos;))
+    }
+    return stop
+  }
+  return start
+}
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(0.4.7)</span></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>
