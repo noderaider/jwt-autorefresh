@@ -57,17 +57,20 @@ export default function autorefresh(opts) {
   const execute = () => {
     clearTimeout(timeoutID)
     log.info(format(CODES.EXECUTE, 'executing refresh'))
-    return refresh()
-      .then(access_token => {
-        if(IS_DEV) assert.typeOf(access_token, 'refresh parameter must return a promise that resolves to an access token')
-        const delay = calculateDelay(access_token)
-        if(IS_DEV) assert.isAbove(delay, 0, 'next auto refresh should always be in the future')
-        schedule(delay)
-      })
-      .catch(err => {
-        log.error(err, format(CODES.INVALID_REFRESH, `refresh rejected with an error => ${err.message}`))
-        throw err
-      })
+    const result = refresh()
+    if(typeof result === 'string')
+      return result
+    assert.ok(result.then, 'refresh must return the access_token or a string that resolves to the access_token')
+    return result.then(access_token => {
+      if(IS_DEV) assert.typeOf(access_token, 'string', 'refresh parameter must return an access_token or a promise that resolves to an access token')
+      const delay = calculateDelay(access_token)
+      if(IS_DEV) assert.isAbove(delay, 0, 'next auto refresh should always be in the future')
+      schedule(delay)
+    })
+    .catch(err => {
+      log.error(err, format(CODES.INVALID_REFRESH, `refresh rejected with an error => ${err.message}`))
+      throw err
+    })
   }
 
   const schedule = delay => {
