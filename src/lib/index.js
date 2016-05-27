@@ -49,7 +49,7 @@ export default function autorefresh(opts) {
       }
       const refreshAtMS = (exp - lead) * 1000
       const delay = refreshAtMS - Date.now()
-      log.info(format(CODES.DELAY, `calculated autorefresh delay => ${delay}`))
+      log.info(format(CODES.DELAY, `calculated autorefresh delay => ${(delay / 1000).toFixed(1)} seconds`))
       return delay
     } catch(err) {
       if(/$Unexpected token [A-Za-z] in JSON/.test(err.message))
@@ -73,7 +73,7 @@ export default function autorefresh(opts) {
       return _schedule(result)
     assert.ok(result.then, 'refresh must return the access_token or a string that resolves to the access_token')
     return result
-      .then(access_token => _schedule(result))
+      .then(access_token => _schedule(access_token))
       .catch(err => {
         log.error(err, format(CODES.INVALID_REFRESH, `refresh rejected with an error => ${err.message}`))
         throw err
