@@ -30,6 +30,10 @@ export default function autorefresh(opts) {
 
   const calculateDelay = access_token => {
     try {
+      if(IS_DEV) {
+        assert.ok(access_token, 'calculateDelay expects an access_token parameter')
+        assert.typeOf(access_token, 'string', 'access_token should be a string')
+      }
       const { exp, nbf } = decode(access_token, null, true)
       if(IS_DEV) {
         assert.ok(exp, 'autorefresh requires JWT token with "exp" standard claim')
@@ -58,8 +62,13 @@ export default function autorefresh(opts) {
     clearTimeout(timeoutID)
     log.info(format(CODES.EXECUTE, 'executing refresh'))
     const result = refresh()
-    if(typeof result === 'string')
-      return result
+    if(typeof result === 'string') {
+      const access_token = result
+      if(IS_DEV) assert.typeOf(access_token, 'string', 'refresh parameter must return an access_token or a promise that resolves to an access token')
+      const delay = calculateDelay(access_token)
+      if(IS_DEV) assert.isAbove(delay, 0, 'next auto refresh should always be in the future')
+      return schedule(delay)
+    }
     assert.ok(result.then, 'refresh must return the access_token or a string that resolves to the access_token')
     return result.then(access_token => {
       if(IS_DEV) assert.typeOf(access_token, 'string', 'refresh parameter must return an access_token or a promise that resolves to an access token')
