@@ -1,6 +1,6 @@
 {
   "name": "jwt-autorefresh",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "Factory to schedule and execute calls to refresh token endpoints in advance of token expiration.",
   "main": "lib/index.js",
   "files": [
