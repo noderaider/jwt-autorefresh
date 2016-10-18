@@ -1,0 +1,68 @@
+{
+  "name": "jwt-autorefresh",
+  "version": "0.2.1",
+  "description": "Factory to schedule and execute calls to refresh token endpoints in advance of token expiration.",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "src",
+    "doc"
+  ],
+  "keywords": [
+    "jwt",
+    "refresh",
+    "token",
+    "openid",
+    "oauth",
+    "expiration",
+    "exp",
+    "keepalive",
+    "unauthorized"
+  ],
+  "scripts": {
+    "clean": "rimraf lib doc",
+    "prebuild": "npm run clean",
+    "build": "babel src/lib -d lib --ignore __tests__,__mocks__",
+    "test": "jest",
+    "prerelease": "run-p build test",
+    "release": "npm version patch && npm publish",
+    "postrelease": "npm run release-gh-pages",
+    "prerelease-gh-pages": "npm run doc",
+    "release-gh-pages": "run-s gh-pages-subtree gh-pages-push gh-pages-delete",
+    "postrelease-gh-pages": "npm run clean && npm run git-save -- clean && git push -u origin master --follow-tags",
+    "predoc": "rimraf doc",
+    "doc": "esdoc -c ./esdoc.json && ncp CNAME doc/CNAME",
+    "postdoc": "npm run git-save -- doc",
+    "gh-pages-subtree": "git subtree split --prefix doc -b gh-pages",
+    "gh-pages-push": "git push -f origin gh-pages:gh-pages",
+    "gh-pages-delete": "git branch -D gh-pages",
+    "git-save": "git add -A && git commit -am "
+  },
+  "dependencies": {
+    "chai": "^3.5.0",
+    "bunyan": "^1.8.1",
+    "jwt-simple": "^0.5.0",
+    "npm-run-all": "^2.1.1"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.7.7",
+    "babel-preset-latest": "^6.6.0",
+    "babel-preset-stage-2": "^6.5.0",
+    "esdoc": "^0.4.6",
+    "esdoc-es7-plugin": "0.0.3",
+    "jest": "^16.0.1",
+    "ncp": "^2.0.0",
+    "npm-run-all": "^2.1.1",
+    "rimraf": "^2.5.2"
+  },
+  "author": "Cole Chamberlain <cole.chamberlain@gmail.com> (https://github.com/cchamberlain)",
+  "bugs": {
+    "url": "https://github.com/cchamberlain/jwt-autorefresh/issues"
+  },
+  "homepage": "http://jwt-autorefresh.js.org",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cchamberlain/jwt-autorefresh.git"
+  }
+}
