@@ -20,18 +20,11 @@
     "unauthorized"
   ],
   "scripts": {
-    "start": "npm run build -- --watch",
-    "clean": "run-p clean-lib clean-test clean-doc",
-    "clean-lib": "rimraf lib",
-    "clean-test": "rimraf spec/tests",
-    "clean-doc": "rimraf doc",
+    "clean": "rimraf lib doc",
     "prebuild": "npm run clean",
-    "build": "babel src/lib -d lib",
-    "postbuild": "npm run build-test",
-    "build-test": "babel src/spec -d spec",
-    "pretest": "npm run build",
-    "test": "jasmine",
-    "prerelease": "npm run test",
+    "build": "babel src/lib -d lib --ignore __tests__,__mocks__",
+    "test": "jest",
+    "prerelease": "run-p build test",
     "release": "npm version patch && npm publish",
     "postrelease": "npm run release-gh-pages",
     "prerelease-gh-pages": "npm run doc",
@@ -43,8 +36,7 @@
     "gh-pages-subtree": "git subtree split --prefix doc -b gh-pages",
     "gh-pages-push": "git push -f origin gh-pages:gh-pages",
     "gh-pages-delete": "git branch -D gh-pages",
-    "git-save": "git add -A && git commit -am ",
-    "upgrade": "ncu -a && npm update"
+    "git-save": "git add -A && git commit -am "
   },
   "dependencies": {
     "chai": "^3.5.0",
@@ -58,6 +50,7 @@
     "babel-preset-stage-0": "^6.5.0",
     "esdoc": "^0.4.6",
     "esdoc-es7-plugin": "0.0.3",
+    "jest": "^16.0.1",
     "ncp": "^2.0.0",
     "npm-run-all": "^2.1.1",
     "rimraf": "^2.5.2"

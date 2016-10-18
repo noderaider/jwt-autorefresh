@@ -1,4 +1,5 @@
 import { encode, decode } from 'jwt-simple'
+import autorefresh from '../'
 
 const SECRET = 'xxx'
 const REQUIRED_CLAIMS = [ 'nbf', 'exp' ]
@@ -25,7 +26,6 @@ const generate = () => {
 }
 
 describe('autorefresh', () => {
-  const autorefresh = require('../../lib').default
   let data = null
   beforeEach(() => { data = generate() })
   afterEach(() => { data = null })
