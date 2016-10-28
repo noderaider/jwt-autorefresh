@@ -14,7 +14,7 @@ const CODES = { DELAY: 'DELAY'
               }
 const format = (code, message) => `${code}|${message}`
 
-const validate = ({ refresh, leadSeconds, log = createLogger({ name: 'autorefresh', level: IS_DEV ? 'info' : 'error' })}) => {
+const validate = ({ refresh, leadSeconds, log = createLogger({ name: 'autorefresh', level: IS_DEV ? 'warn' : 'error' })}) => {
   if(IS_DEV) {
     assert.ok(refresh, 'autorefresh requires a refresh function parameter')
     assert.ok(leadSeconds, 'autorefresh requires a leadSeconds number or function returning a number in seconds parameter')
